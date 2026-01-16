@@ -66,6 +66,18 @@ th{background:#f0f0f0;}
   <label>Filtrar por mes: </label>
   <select id="filtroMes" onchange="mostrar()">
     <option value="todos">Todos</option>
+    <option value="1">Enero</option>
+    <option value="2">Febrero</option>
+    <option value="3">Marzo</option>
+    <option value="4">Abril</option>
+    <option value="5">Mayo</option>
+    <option value="6">Junio</option>
+    <option value="7">Julio</option>
+    <option value="8">Agosto</option>
+    <option value="9">Septiembre</option>
+    <option value="10">Octubre</option>
+    <option value="11">Noviembre</option>
+    <option value="12">Diciembre</option>
   </select>
   <br>
   <label>Filtrar por año: </label>
@@ -90,9 +102,15 @@ th{background:#f0f0f0;}
     <tbody></tbody>
   </table>
 
+  <br>
+  <button onclick="exportarPDF()">📄 Exportar PDF profesional</button>
   <br><br>
   <button onclick="logout()">Cerrar sesión</button>
 </div>
+
+<!-- jsPDF CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <!-- Firebase Scripts -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -128,16 +146,13 @@ async function login(){
   }
 }
 
-function logout(){
-  auth.signOut();
-}
+function logout(){ auth.signOut(); }
 
-// ===== Verificar sesión =====
 auth.onAuthStateChanged(user => {
   if(user){
     document.getElementById("loginPanel").style.display="none";
     document.getElementById("panel").style.display="block";
-    actualizarFiltros();
+    actualizarFiltrosAnio();
     mostrar();
   } else {
     document.getElementById("loginPanel").style.display="block";
@@ -182,7 +197,7 @@ async function agregarDeportista(){
   }
 
   limpiarFormulario();
-  actualizarFiltros();
+  actualizarFiltrosAnio();
   mostrar();
 }
 
@@ -205,12 +220,11 @@ async function editarDeportista(id){
 async function borrarDeportista(id){
   if(confirm("¿Seguro que deseas eliminar este deportista?")){
     await db.collection("deportistas").doc(id).delete();
-    actualizarFiltros();
+    actualizarFiltrosAnio();
     mostrar();
   }
 }
 
-// ===== CAMBIAR ESTADO DE PAGO =====
 async function togglePago(id){
   const docRef = db.collection("deportistas").doc(id);
   const docSnap = await docRef.get();
@@ -227,49 +241,21 @@ async function togglePago(id){
     } else {
       await docRef.update({pago:"Pendiente", fechaPago:null});
     }
-    actualizarFiltros();
     mostrar();
   }
 }
 
-function enviarWhatsApp(nombre,pago,telefono){
-  const url=`https://wa.me/${telefono}?text=${encodeURIComponent(`Hola ${nombre}, tu estado de pago es: ${pago}. Club Ónix`)}`;
-  window.open(url,"_blank");
-}
-
-function enviarCorreo(nombre,pago,correo){
-  const url=`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent("Estado de pago - Club Ónix")}&body=${encodeURIComponent(`Hola ${nombre}, tu estado de pago es: ${pago}.`)}`;
-  window.open(url,"_blank");
-}
-
-// ===== ACTUALIZAR FILTROS DE MES Y AÑO =====
-async function actualizarFiltros(){
+async function actualizarFiltrosAnio(){
   const snapshot = await db.collection("deportistas").get();
-  const meses = new Set();
   const anios = new Set();
-
   snapshot.forEach(docu=>{
     const d = docu.data();
-    if(d.fechaPago){
-      meses.add(d.fechaPago.mes);
-      anios.add(d.fechaPago.anio);
-    }
+    if(d.fechaPago) anios.add(d.fechaPago.anio);
   });
 
-  const filtroMes = document.getElementById("filtroMes");
   const filtroAnio = document.getElementById("filtroAnio");
-
-  filtroMes.innerHTML = '<option value="todos">Todos</option>';
   filtroAnio.innerHTML = '<option value="todos">Todos</option>';
-
-  Array.from(meses).sort((a,b)=>a-b).forEach(m=> {
-    const opt = document.createElement("option");
-    opt.value = m;
-    opt.text = new Date(0,m-1).toLocaleString('es',{month:'long'});
-    filtroMes.appendChild(opt);
-  });
-
-  Array.from(anios).sort((a,b)=>a-b).forEach(a=> {
+  Array.from(anios).sort((a,b)=>a-b).forEach(a=>{
     const opt = document.createElement("option");
     opt.value = a;
     opt.text = a;
@@ -277,7 +263,6 @@ async function actualizarFiltros(){
   });
 }
 
-// ===== MOSTRAR DEPORTISTAS =====
 async function mostrar(){
   const lista = document.getElementById("lista");
   const filtroPago = document.getElementById("filtroPago").value;
@@ -295,14 +280,12 @@ async function mostrar(){
     const id = docu.id;
     const clasePago = d.pago.startsWith("Pagado")?"pago-pagado":"pago-pendiente";
 
-    // Resumen
     if(resumen[d.sede]){
       resumen[d.sede].total++;
       if(d.pago.startsWith("Pagado")) resumen[d.sede].pagados++;
       else resumen[d.sede].pendientes++;
     }
 
-    // Filtros
     if(filtroPago==="pendiente" && d.pago.startsWith("Pagado")) return;
     if(filtroPago==="pagado" && d.pago.startsWith("Pendiente")) return;
     if(filtroSede !== "todos" && d.sede !== filtroSede) return;
@@ -320,13 +303,10 @@ async function mostrar(){
       <button onclick="editarDeportista('${id}')">✏️ Editar</button>
       <button class="delete-btn" onclick="borrarDeportista('${id}')">🗑️ Eliminar</button>
       <button class="toggle-btn" onclick="togglePago('${id}')">💵 Cambiar estado de pago</button>
-      <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}','${d.acudiente?.telefono || ""}')">📲 WhatsApp</button>
-      <button onclick="enviarCorreo('${d.nombre}','${d.pago}','${d.acudiente?.correo || ""}')">✉️ Gmail</button>
     `;
     lista.appendChild(li);
   });
 
-  // Actualizar resumen
   const tbody = document.querySelector("#resumenPagos tbody");
   tbody.innerHTML = "";
   for(const sede in resumen){
@@ -339,6 +319,67 @@ async function mostrar(){
     `;
     tbody.appendChild(tr);
   }
+}
+
+// ===== EXPORTAR PDF PROFESIONAL =====
+async function exportarPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const snapshot = await db.collection("deportistas").get();
+  
+  // Agrupar por categoría y sede
+  const categorias = {};
+  snapshot.forEach(docu=>{
+    const d = docu.data();
+    if(!categorias[d.categoria]) categorias[d.categoria] = {};
+    if(!categorias[d.categoria][d.sede]) categorias[d.categoria][d.sede] = [];
+    categorias[d.categoria][d.sede].push(d);
+  });
+
+  let y = 10;
+  doc.setFontSize(16);
+  doc.text("Club Ónix - Deportistas por Categoría y Sede", 10, y); y+=10;
+
+  for(const cat in categorias){
+    doc.setFontSize(14);
+    doc.text(`Categoría: ${cat}`,10,y); y+=7;
+    for(const sede in categorias[cat]){
+      doc.setFontSize(12);
+      doc.text(`Sede: ${sede}`,12,y); y+=6;
+
+      const rows = categorias[cat][sede].map(d=>{
+        return [
+          d.nombre,
+          d.pago.startsWith("Pagado") ? "Pagado" : "Pendiente",
+          d.acudiente?.nombre||"-",
+          d.acudiente?.telefono||"-",
+          d.acudiente?.correo||"-"
+        ];
+      });
+
+      doc.autoTable({
+        startY: y,
+        head:[["Nombre","Pago","Acudiente","Teléfono","Correo"]],
+        body: rows,
+        theme:'grid',
+        headStyles:{fillColor:[200,200,200]},
+        didDrawCell: function(data){
+          if(data.column.index === 1 && data.cell.section === 'body'){
+            const pago = data.cell.text[0];
+            if(pago === "Pagado"){
+              data.cell.styles.textColor = [0,128,0]; // verde
+            } else {
+              data.cell.styles.textColor = [255,0,0]; // rojo
+            }
+          }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 10;
+      if(y>280){ doc.addPage(); y=10; }
+    }
+  }
+
+  doc.save("deportistas_profesional.pdf");
 }
 </script>
 
