@@ -1,45 +1,68 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Ingreso - Club Ónix</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Ingreso - Club Ónix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{font-family:Arial;margin:20px;}
+input,button{padding:5px;margin:5px 0;}
+#error{color:red;}
+</style>
 </head>
 <body>
 
 <h2>Ingreso al sistema - Club Ónix</h2>
 
-<form onsubmit="return login()">
-  <label>Usuario:</label><br>
-  <input type="text" id="usuario" required><br><br>
+<input type="email" id="loginEmail" placeholder="Correo electrónico" required><br>
+<input type="password" id="loginPassword" placeholder="Contraseña" required><br>
+<button onclick="login()">Ingresar</button>
+<p id="error"></p>
 
-  <label>Contraseña:</label><br>
-  <input type="password" id="password" required><br><br>
+<script type="module">
+  // ===== FIREBASE =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-  <button type="submit">Ingresar</button>
-</form>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDIFkhozwB5W7NYdjJlvH-EZvPlvFsOz3E",
+    authDomain: "club-deportivo-de-volley-onix.firebaseapp.com",
+    projectId: "club-deportivo-de-volley-onix",
+    storageBucket: "club-deportivo-de-volley-onix.firebasestorage.app",
+    messagingSenderId: "378193996380",
+    appId: "1:378193996380:web:12c4c1cf27499e224a9499",
+    measurementId: "G-Y8DL77DH3J"
+  };
 
-<p id="mensaje" style="color:red;"></p>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
-<script>
-function login() {
-  const usuario = document.getElementById("usuario").value;
-  const password = document.getElementById("password").value;
+  // ===== LOGIN =====
+  async function login(){
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+    const error = document.getElementById("error");
 
-  // Usuarios base (provisional)
-  if (usuario === "admin" && password === "admin123") {
-    window.location.href = "panel-admin.html";
-    return false;
+    try{
+      await signInWithEmailAndPassword(auth,email,password);
+      error.innerText="";
+      alert("¡Ingreso correcto!");
+      // Aquí puedes redirigir a tu panel si quieres
+      // window.location.href="panel.html";
+    }catch(e){
+      error.innerText="Correo o contraseña incorrectos";
+    }
   }
 
-  if (usuario.startsWith("entrenador") && password === "1234") {
-    window.location.href = "panel-entrenador.html";
-    return false;
-  }
-
-  document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos";
-  return false;
-}
+  // ===== CONTROL DE SESIÓN =====
+  onAuthStateChanged(auth,user=>{
+    if(user){
+      console.log("Usuario logueado:",user.email);
+      // Puedes mostrar tu panel automáticamente aquí
+    }else{
+      console.log("No hay usuario logueado");
+    }
+  });
 </script>
 
 </body>
