@@ -4,6 +4,90 @@
   <meta charset="UTF-8">
   <title>Panel Administrador - Club Ónix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    h1, h2, h3 {
+      color: #1f1f1f;
+    }
+
+    input, select {
+      padding: 5px;
+      margin: 5px 0;
+      width: 200px;
+    }
+
+    button {
+      margin: 5px 5px 5px 0;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .deportista-card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+
+    .deportista-card strong {
+      color: #333;
+    }
+
+    .deportista-card small {
+      display: block;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      color: #555;
+    }
+
+    .deportista-card button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 3px;
+    }
+
+    .deportista-card button:hover {
+      opacity: 0.8;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+    }
+
+    .delete-btn:hover {
+      opacity: 0.8;
+    }
+
+    .pago-pendiente {
+      color: orange;
+      font-weight: bold;
+    }
+
+    .pago-pagado {
+      color: green;
+      font-weight: bold;
+    }
+
+    .filtro {
+      margin: 10px 0;
+    }
+
+    .busqueda {
+      margin: 10px 0;
+    }
+
+  </style>
 </head>
 <body>
 
@@ -19,10 +103,24 @@
 <input id="acudienteTelefono" placeholder="Teléfono">
 <input id="acudienteCorreo" type="email" placeholder="Correo electrónico">
 
-<button onclick="agregarDeportista()">Agregar deportista</button>
-
+<button id="btnGuardar" onclick="agregarDeportista()">Agregar deportista</button>
 
 <h2>Lista de deportistas</h2>
+
+<div class="filtro">
+  <label for="filtroPago">Filtrar por pago: </label>
+  <select id="filtroPago" onchange="mostrar()">
+    <option value="todos">Todos</option>
+    <option value="pendiente">Pendientes</option>
+    <option value="pagado">Pagados</option>
+  </select>
+</div>
+
+<div class="busqueda">
+  <label for="busquedaNombre">Buscar por nombre: </label>
+  <input id="busquedaNombre" type="text" placeholder="Escribe el nombre" oninput="mostrar()">
+</div>
+
 <ul id="lista"></ul>
 
 <h2>Registrar pago</h2>
@@ -34,96 +132,145 @@
 <a href="login.html">Cerrar sesión</a>
 
 <script>
-let deportistas = JSON.parse(localStorage.getItem("deportistas")) || [];
+  let deportistas = JSON.parse(localStorage.getItem("deportistas")) || [];
+  let indiceEdicion = null;
 
-function guardar() {
-  localStorage.setItem("deportistas", JSON.stringify(deportistas));
-  mostrar();
-}
+  function guardar() {
+    localStorage.setItem("deportistas", JSON.stringify(deportistas));
+    mostrar();
+  }
 
-function agregarDeportista() {
-  const nombre = document.getElementById("nombre").value;
-  const categoria = document.getElementById("categoria").value;
+  function limpiarFormulario() {
+    document.getElementById("nombre").value = "";
+    document.getElementById("categoria").value = "";
+    document.getElementById("acudienteNombre").value = "";
+    document.getElementById("acudienteTelefono").value = "";
+    document.getElementById("acudienteCorreo").value = "";
+  }
 
-  const acudienteNombre = document.getElementById("acudienteNombre").value;
-  const acudienteTelefono = document.getElementById("acudienteTelefono").value;
-  const acudienteCorreo = document.getElementById("acudienteCorreo").value;
+  function agregarDeportista() {
+    const nombre = document.getElementById("nombre").value;
+    const categoria = document.getElementById("categoria").value;
+    const acudienteNombre = document.getElementById("acudienteNombre").value;
+    const acudienteTelefono = document.getElementById("acudienteTelefono").value;
+    const acudienteCorreo = document.getElementById("acudienteCorreo").value;
 
-  if (!nombre) return;
+    if (!nombre) return;
 
-  deportistas.push({
-    nombre,
-    categoria,
-    pago: "Pendiente",
-    acudiente: {
-      nombre: acudienteNombre,
-      telefono: acudienteTelefono,
-      correo: acudienteCorreo
+    if (indiceEdicion === null) {
+      deportistas.push({
+        nombre,
+        categoria,
+        pago: "Pendiente",
+        acudiente: {
+          nombre: acudienteNombre,
+          telefono: acudienteTelefono,
+          correo: acudienteCorreo
+        }
+      });
+    } else {
+      deportistas[indiceEdicion] = {
+        ...deportistas[indiceEdicion],
+        nombre,
+        categoria,
+        acudiente: {
+          nombre: acudienteNombre,
+          telefono: acudienteTelefono,
+          correo: acudienteCorreo
+        }
+      };
+      indiceEdicion = null;
+      document.getElementById("btnGuardar").innerText = "Agregar deportista";
     }
-  });
 
-  guardar();
+    guardar();
+    limpiarFormulario();
+  }
 
-  // Limpiar campos
-  document.getElementById("nombre").value = "";
-  document.getElementById("categoria").value = "";
-  document.getElementById("acudienteNombre").value = "";
-  document.getElementById("acudienteTelefono").value = "";
-  document.getElementById("acudienteCorreo").value = "";
-}
+  function editarDeportista(index) {
+    const d = deportistas[index];
 
+    document.getElementById("nombre").value = d.nombre;
+    document.getElementById("categoria").value = d.categoria;
+    document.getElementById("acudienteNombre").value = d.acudiente?.nombre || "";
+    document.getElementById("acudienteTelefono").value = d.acudiente?.telefono || "";
+    document.getElementById("acudienteCorreo").value = d.acudiente?.correo || "";
 
-function registrarPago() {
-  const nombre = document.getElementById("pagoNombre").value;
-  const monto = document.getElementById("monto").value;
-  deportistas = deportistas.map(d =>
-    d.nombre === nombre ? { ...d, pago: "Pagado $ " + monto } : d
-  );
-  guardar();
-}
+    indiceEdicion = index;
+    document.getElementById("btnGuardar").innerText = "Guardar cambios";
+  }
 
-function enviarWhatsApp(nombre, pago) {
-  const mensaje = `Hola ${nombre}, te informamos que tu estado de pago es: ${pago}. Club Deportivo Volleyball Ónix.`;
-  const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, "_blank");
-}
+  function borrarDeportista(index) {
+    if (confirm(`¿Seguro que deseas eliminar a ${deportistas[index].nombre}?`)) {
+      deportistas.splice(index, 1);
+      guardar();
+    }
+  }
 
-function enviarCorreo(nombre, pago) {
-  const asunto = "Estado de pago - Club Ónix";
-  const cuerpo = `Hola ${nombre},\n\nTu estado de pago es: ${pago}.\n\nClub Deportivo Volleyball Ónix.`;
-  const url = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-  window.open(url, "_blank");
-}
+  function registrarPago() {
+    const nombre = document.getElementById("pagoNombre").value;
+    const monto = document.getElementById("monto").value;
 
-function mostrar() {
-  const lista = document.getElementById("lista");
-  lista.innerHTML = "";
-  deportistas.forEach((d, index) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-    <button onclick="editarDeportista(${index})">✏️ Editar</button>
-  <strong>${d.nombre}</strong> - ${d.categoria} - ${d.pago}<br>
+    deportistas = deportistas.map(d =>
+      d.nombre === nombre ? { ...d, pago: "Pagado $ " + monto } : d
+    );
 
-  <small>
-    👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre || "No registrado"}<br>
-    📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono || "-"}<br>
-    ✉️ <strong>Correo:</strong> ${d.acudiente?.correo || "-"}
-  </small>
-  <br>
+    guardar();
+  }
 
-  <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}')">📲 WhatsApp</button>
-  <button onclick="enviarCorreo('${d.nombre}','${d.pago}')">✉️ Gmail</button>
-`;
+  function enviarWhatsApp(nombre, pago) {
+    const mensaje = `Hola ${nombre}, te informamos que tu estado de pago es: ${pago}. Club Deportivo Volleyball Ónix.`;
+    const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, "_blank");
+  }
 
-    lista.appendChild(li);
-  });
-}
+  function enviarCorreo(nombre, pago) {
+    const asunto = "Estado de pago - Club Ónix";
+    const cuerpo = `Hola ${nombre},\n\nTu estado de pago es: ${pago}.\n\nClub Deportivo Volleyball Ónix.`;
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    window.open(url, "_blank");
+  }
 
-mostrar();
+  function mostrar() {
+    const lista = document.getElementById("lista");
+    const filtro = document.getElementById("filtroPago").value;
+    const busqueda = document.getElementById("busquedaNombre").value.toLowerCase();
+    lista.innerHTML = "";
+
+    deportistas.forEach((d, index) => {
+      const clasePago = d.pago.startsWith("Pagado") ? "pago-pagado" : "pago-pendiente";
+
+      // Filtro por pago
+      if (filtro === "pendiente" && d.pago.startsWith("Pagado")) return;
+      if (filtro === "pagado" && d.pago.startsWith("Pendiente")) return;
+
+      // Filtro por búsqueda
+      if (!d.nombre.toLowerCase().includes(busqueda)) return;
+
+      const li = document.createElement("li");
+      li.className = "deportista-card";
+
+      li.innerHTML = `
+        <strong>${d.nombre}</strong> - ${d.categoria} - <span class="${clasePago}">${d.pago}</span><br>
+
+        <small>
+          👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre || "No registrado"}<br>
+          📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono || "-"}<br>
+          ✉️ <strong>Correo:</strong> ${d.acudiente?.correo || "-"}
+        </small>
+
+        <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}')">📲 WhatsApp</button>
+        <button onclick="enviarCorreo('${d.nombre}','${d.pago}')">✉️ Gmail</button>
+        <button onclick="editarDeportista(${index})">✏️ Editar</button>
+        <button class="delete-btn" onclick="borrarDeportista(${index})">🗑️ Eliminar</button>
+      `;
+
+      lista.appendChild(li);
+    });
+  }
+
+  mostrar();
 </script>
-
-mostrar();
-
 
 </body>
 </html>
