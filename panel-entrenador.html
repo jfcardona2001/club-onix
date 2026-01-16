@@ -22,8 +22,11 @@ function guardar() {
   mostrar();
 }
 
+// Función para marcar asistencia por fecha
 function marcarAsistencia(index, estado) {
-  deportistas[index].asistencia = estado;
+  const fecha = new Date().toLocaleDateString();
+  if(!deportistas[index].asistenciaHist) deportistas[index].asistenciaHist = [];
+  deportistas[index].asistenciaHist.push({ fecha, estado });
   guardar();
 }
 
@@ -33,12 +36,22 @@ function mostrar() {
 
   deportistas.forEach((d, index) => {
     const li = document.createElement("li");
+
+    // Historial de asistencia en texto
+    let historial = "";
+    if(d.asistenciaHist){
+      historial = "<br>Historial: ";
+      d.asistenciaHist.forEach(a => {
+        historial += `[${a.fecha}: ${a.estado}] `;
+      });
+    }
+
     li.innerHTML = `
       <strong>${d.nombre}</strong> - ${d.categoria}<br>
-      Asistencia:
+      Asistencia hoy:
       <button onclick="marcarAsistencia(${index}, 'Asistió')">✅</button>
       <button onclick="marcarAsistencia(${index}, 'No asistió')">❌</button>
-      <span> ${d.asistencia || ''}</span>
+      ${historial}
     `;
     lista.appendChild(li);
   });
@@ -46,6 +59,7 @@ function mostrar() {
 
 mostrar();
 </script>
+
 
 </body>
 </html>
