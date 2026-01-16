@@ -7,15 +7,14 @@
 <style>
 body{font-family:Arial;margin:20px;}
 input,select,button{padding:5px;margin:5px 0;}
-ul{list-style:none;padding:0;}
-.deportista-card{border:1px solid #ccc;padding:10px;margin-bottom:10px;border-radius:5px;background:#f9f9f9;}
-.pago-pendiente{color:red;font-weight:bold;}
-.pago-pagado{color:green;font-weight:bold;}
+table{border-collapse:collapse;width:100%;margin-top:20px;}
+th,td{border:1px solid #ccc;padding:8px;text-align:left;}
+.pago-pendiente{background-color:#f8d7da;color:#721c24;font-weight:bold;}
+.pago-pagado{background-color:#d4edda;color:#155724;font-weight:bold;}
 .delete-btn{background:#dc3545;color:white;border:none;border-radius:3px;padding:5px;}
 #panel{display:none;}
 #error{color:red;}
 </style>
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -73,8 +72,23 @@ ul{list-style:none;padding:0;}
     <option value="12">Diciembre</option>
   </select><br>
 
-  <h2>Lista de deportistas</h2>
-  <ul id="lista"></ul>
+  <h2>Tabla de deportistas</h2>
+  <table id="tablaDeportistas">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Pago</th>
+        <th>Mes</th>
+        <th>Sede</th>
+        <th>Acudiente</th>
+        <th>Teléfono</th>
+        <th>Correo</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <h2>Registrar pago</h2>
   <input id="pagoNombre" placeholder="Nombre del deportista">
@@ -192,14 +206,13 @@ function borrarDeportista(id){
 
 function cambiarEstado(id,estado){
   const mesActual = new Date().getMonth()+1;
-  let nuevoPago = estado.startsWith("Pagado") ? "Pagado" : "Pendiente";
-  let nuevoMes = estado.startsWith("Pagado") ? mesActual : "";
+  let nuevoPago = estado==="Pagado" ? "Pagado" : "Pendiente";
+  let nuevoMes = estado==="Pagado" ? mesActual : "";
   db.collection("deportistas").doc(id).update({pago:nuevoPago, mesPago:nuevoMes}).then(mostrar);
 }
 
 function registrarPago(){
   const nombre = document.getElementById("pagoNombre").value;
-  const monto = document.getElementById("monto").value;
   const mesActual = new Date().getMonth() + 1;
   db.collection("deportistas").where("nombre","==",nombre).get().then(snapshot=>{
     snapshot.forEach(docu=>{
@@ -210,11 +223,13 @@ function registrarPago(){
 }
 
 function mostrar(){
-  const lista=document.getElementById("lista");
   const filtroSede=document.getElementById("filtroSede").value;
   const filtroMes=document.getElementById("filtroMes").value;
   const busqueda=document.getElementById("busquedaNombre").value.toLowerCase();
-  lista.innerHTML="";
+
+  const tbody = document.querySelector("#tablaDeportistas tbody");
+  tbody.innerHTML="";
+
   db.collection("deportistas").get().then(snapshot=>{
     snapshot.forEach(docu=>{
       const d = docu.data();
@@ -225,20 +240,24 @@ function mostrar(){
 
       const clasePago = d.pago==="Pagado" ? "pago-pagado" : "pago-pendiente";
 
-      const li=document.createElement("li");
-      li.className="deportista-card";
-      li.innerHTML=`
-        <strong>${d.nombre}</strong> - ${d.categoria} - <span class="${clasePago}">${d.pago}</span><br>
-        <small>👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre||"-"}<br>
-        📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono||"-"}<br>
-        ✉️ <strong>Correo:</strong> ${d.acudiente?.correo||"-"}<br>
-        🏢 <strong>Sede:</strong> ${d.sede}</small><br>
-        <button onclick="cambiarEstado('${id}','Pagado')">Pagado</button>
-        <button onclick="cambiarEstado('${id}','Pendiente')">Pendiente</button>
-        <button onclick="editarDeportista('${id}')">✏️ Editar</button>
-        <button class="delete-btn" onclick="borrarDeportista('${id}')">🗑️ Eliminar</button>
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${d.nombre}</td>
+        <td>${d.categoria}</td>
+        <td class="${clasePago}">${d.pago}</td>
+        <td>${d.mesPago || "-"}</td>
+        <td>${d.sede}</td>
+        <td>${d.acudiente?.nombre || "-"}</td>
+        <td>${d.acudiente?.telefono || "-"}</td>
+        <td>${d.acudiente?.correo || "-"}</td>
+        <td>
+          <button onclick="cambiarEstado('${id}','Pagado')">Pagado</button>
+          <button onclick="cambiarEstado('${id}','Pendiente')">Pendiente</button>
+          <button onclick="editarDeportista('${id}')">✏️ Editar</button>
+          <button class="delete-btn" onclick="borrarDeportista('${id}')">🗑️ Eliminar</button>
+        </td>
       `;
-      lista.appendChild(li);
+      tbody.appendChild(tr);
     });
   });
 }
@@ -255,7 +274,8 @@ function exportarPDF(){
       doc.text(`Acudiente: ${d.acudiente?.nombre||"-"}`,10,y); y+=6;
       doc.text(`Teléfono: ${d.acudiente?.telefono||"-"}`,10,y); y+=6;
       doc.text(`Correo: ${d.acudiente?.correo||"-"}`,10,y); y+=6;
-      doc.text(`Sede: ${d.sede}`,10,y); y+=8;
+      doc.text(`Sede: ${d.sede}`,10,y); y+=6;
+      doc.text(`Pago: ${d.pago}`,10,y); y+=8;
       if(y>270){ doc.addPage(); y=10; }
     });
     doc.save("Deportistas.pdf");
