@@ -22,6 +22,7 @@
 <input id="monto" type="number" placeholder="Monto (COP)">
 <button onclick="registrarPago()">Registrar pago</button>
 
+<br><br>
 <a href="login.html">Cerrar sesión</a>
 
 <script>
@@ -44,7 +45,7 @@ function registrarPago() {
   const nombre = document.getElementById("pagoNombre").value;
   const monto = document.getElementById("monto").value;
   deportistas = deportistas.map(d =>
-    d.nombre === nombre ? { ...d, pago: "Pagado $" + monto } : d
+    d.nombre === nombre ? { ...d, pago: "Pagado $ " + monto } : d
   );
   guardar();
 }
@@ -64,4 +65,3 @@ mostrar();
 
 </body>
 </html>
-
