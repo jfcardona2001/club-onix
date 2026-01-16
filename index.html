@@ -10,6 +10,9 @@ input,button{padding:5px;margin:5px 0;}
 h2{margin-top:20px;}
 #error{color:red;}
 #panel{display:none;}
+ul{list-style:none;padding-left:0;}
+li{margin-bottom:10px;}
+button{margin-left:5px;}
 </style>
 </head>
 <body>
@@ -67,7 +70,6 @@ h2{margin-top:20px;}
     const email = document.getElementById("loginEmail").value;
     const password = document.getElementById("loginPassword").value;
     const error = document.getElementById("error");
-
     try{
       await signInWithEmailAndPassword(auth,email,password);
       error.innerText="";
@@ -105,7 +107,11 @@ h2{margin-top:20px;}
     await addDoc(deportistasCol,{
       nombre,categoria,acudiente,telefono,correoAcudiente
     });
+    limpiarInputs();
     mostrarDeportistas();
+  }
+
+  function limpiarInputs(){
     document.getElementById("nombre").value="";
     document.getElementById("categoria").value="";
     document.getElementById("acudiente").value="";
@@ -136,16 +142,15 @@ h2{margin-top:20px;}
   }
 
   async function editar(id){
-    const docSnap = await getDocs(deportistasCol);
     const ref = doc(db,"deportistas",id);
     const nombre = prompt("Nuevo nombre:");
     const categoria = prompt("Nueva categoría:");
     const acudiente = prompt("Nuevo acudiente:");
     const telefono = prompt("Nuevo teléfono:");
     const correoAcudiente = prompt("Nuevo correo:");
+    if(!nombre) return;
     await updateDoc(ref,{
-      nombre,nombre,nombre,nombre,
-      categoria,acudiente,telefono,correoAcudiente
+      nombre,categoria,acudiente,telefono,correoAcudiente
     });
     mostrarDeportistas();
   }
