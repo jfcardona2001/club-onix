@@ -3,21 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <title>Panel Administrador - Club Ónix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
-<h1>Panel del Administrador</h1>
+<h1>Panel Administrador - Club Ónix</h1>
 
-<p>Bienvenido administrador del Club Deportivo Volleyball Ónix</p>
+<h2>Registrar deportista</h2>
+<input id="nombre" placeholder="Nombre completo">
+<input id="categoria" placeholder="Categoría">
+<button onclick="agregarDeportista()">Agregar</button>
 
-<ul>
-  <li>Gestionar deportistas</li>
-  <li>Control de pagos</li>
-  <li>Asistencias</li>
-  <li>Entrenadores</li>
-</ul>
+<h2>Lista de deportistas</h2>
+<ul id="lista"></ul>
+
+<h2>Registrar pago</h2>
+<input id="pagoNombre" placeholder="Nombre del deportista">
+<input id="monto" type="number" placeholder="Monto (COP)">
+<button onclick="registrarPago()">Registrar pago</button>
 
 <a href="login.html">Cerrar sesión</a>
 
+<script>
+let deportistas = JSON.parse(localStorage.getItem("deportistas")) || [];
+
+function guardar() {
+  localStorage.setItem("deportistas", JSON.stringify(deportistas));
+  mostrar();
+}
+
+function agregarDeportista() {
+  const nombre = document.getElementById("nombre").value;
+  const categoria = document.getElementById("categoria").value;
+  if (!nombre) return;
+  deportistas.push({ nombre, categoria, pago: "Pendiente" });
+  guardar();
+}
+
+function registrarPago() {
+  const nombre = document.getElementById("pagoNombre").value;
+  const monto = document.getElementById("monto").value;
+  deportistas = deportistas.map(d =>
+    d.nombre === nombre ? { ...d, pago: "Pagado $" + monto } : d
+  );
+  guardar();
+}
+
+function mostrar() {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  deportistas.forEach(d => {
+    const li = document.createElement("li");
+    li.textContent = `${d.nombre} - ${d.categoria} - ${d.pago}`;
+    lista.appendChild(li);
+  });
+}
+
+mostrar();
+</script>
+
 </body>
 </html>
+
