@@ -5,31 +5,15 @@
 <title>Panel Administrador - Club Ónix</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f4f6f8;
-  margin: 0;
-  padding: 20px;
-  color: #333;
-}
-h1,h2,h3 {color:#2c3e50;}
-input,select,button {padding:8px;margin:5px 0;border-radius:4px;border:1px solid #ccc;font-size:14px;}
-button {cursor:pointer;background-color:#3498db;color:white;border:none;transition:0.2s;}
-button:hover {background-color:#2980b9;}
-ul {list-style:none;padding:0;}
-.deportista-card {
-  border:1px solid #ccc;padding:15px;margin-bottom:10px;border-radius:6px;background:white;
-  box-shadow:0 2px 5px rgba(0,0,0,0.1);
-}
+body{font-family:Arial;margin:20px;}
+input,select,button{padding:5px;margin:5px 0;}
+ul{list-style:none;padding:0;}
+.deportista-card{border:1px solid #ccc;padding:10px;margin-bottom:10px;border-radius:5px;background:#f9f9f9;}
 .pago-pendiente{color:red;font-weight:bold;}
 .pago-pagado{color:green;font-weight:bold;}
-.delete-btn{background:#e74c3c;color:white;border:none;border-radius:4px;padding:5px 8px;margin-top:5px;}
-.delete-btn:hover{background:#c0392b;}
-#loginPanel{max-width:350px;margin:auto;background:white;padding:20px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-#panel{max-width:900px;margin:auto;}
-#panel input,#panel select{width:calc(50% - 10px);}
-#panel label{font-weight:bold;}
-#panel button{margin-top:10px;}
+.delete-btn{background:#dc3545;color:white;border:none;border-radius:3px;padding:5px;}
+#panel{display:none;}
+#error{color:red;}
 </style>
 </head>
 <body>
@@ -41,10 +25,10 @@ ul {list-style:none;padding:0;}
   <input id="loginEmail" type="email" placeholder="Correo electrónico"><br>
   <input id="loginPassword" type="password" placeholder="Contraseña"><br>
   <button onclick="login()">Iniciar sesión</button>
-  <p id="error" style="color:red;"></p>
+  <p id="error"></p>
 </div>
 
-<div id="panel" style="display:none;">
+<div id="panel">
   <h2>Registrar deportista</h2>
   <input id="nombre" placeholder="Nombre del deportista">
   <input id="categoria" placeholder="Categoría">
@@ -58,22 +42,40 @@ ul {list-style:none;padding:0;}
   <input id="acudienteCorreo" type="email" placeholder="Correo electrónico"><br>
   <button id="btnGuardar" onclick="agregarDeportista()">Agregar deportista</button>
 
-  <h2>Filtros de búsqueda</h2>
-  <label>Nombre:</label><input id="busquedaNombre" type="text" placeholder="Nombre" oninput="mostrar()">
-  <label>Sede:</label><select id="filtroSede" onchange="mostrar()"><option value="todos">Todos</option><option value="Pereira">Pereira</option><option value="Dosquebradas">Dosquebradas</option></select>
-  <label>Pago:</label><select id="filtroPago" onchange="mostrar()"><option value="todos">Todos</option><option value="pendiente">Pendientes</option><option value="pagado">Pagados</option></select>
-  <label>Mes de pago:</label>
+  <h2>Filtros</h2>
+  Nombre: <input id="busquedaNombre" type="text" placeholder="Buscar nombre" oninput="mostrar()">
+  Sede: 
+  <select id="filtroSede" onchange="mostrar()">
+    <option value="todos">Todos</option>
+    <option value="Pereira">Pereira</option>
+    <option value="Dosquebradas">Dosquebradas</option>
+  </select>
+  Pago:
+  <select id="filtroPago" onchange="mostrar()">
+    <option value="todos">Todos</option>
+    <option value="pendiente">Pendientes</option>
+    <option value="pagado">Pagados</option>
+  </select>
+  Mes:
   <select id="filtroMes" onchange="mostrar()">
     <option value="todos">Todos</option>
-    <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
-    <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
-    <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
-    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+    <option value="01">Enero</option>
+    <option value="02">Febrero</option>
+    <option value="03">Marzo</option>
+    <option value="04">Abril</option>
+    <option value="05">Mayo</option>
+    <option value="06">Junio</option>
+    <option value="07">Julio</option>
+    <option value="08">Agosto</option>
+    <option value="09">Septiembre</option>
+    <option value="10">Octubre</option>
+    <option value="11">Noviembre</option>
+    <option value="12">Diciembre</option>
   </select>
 
   <ul id="lista"></ul>
 
-  <h2>Registrar pago rápido</h2>
+  <h2>Registrar pago</h2>
   <input id="pagoNombre" placeholder="Nombre del deportista">
   <input id="monto" type="number" placeholder="Monto (COP)">
   <button onclick="registrarPago()">Registrar pago</button>
@@ -84,13 +86,13 @@ ul {list-style:none;padding:0;}
   <button onclick="logout()">Cerrar sesión</button>
 </div>
 
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDIFkhozwB5W7NYdjJlvH-EZvPlvFsOz3E",
   authDomain: "club-deportivo-de-volley-onix.firebaseapp.com",
@@ -101,25 +103,28 @@ const firebaseConfig = {
   measurementId: "G-Y8DL77DH3J"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
 
 let editarId = null;
 
-async function login(){
+// ===== AUTENTICACIÓN =====
+function login(){
   const email = document.getElementById("loginEmail").value;
   const password = document.getElementById("loginPassword").value;
   const error = document.getElementById("error");
-  try{
-    await signInWithEmailAndPassword(auth,email,password);
-    error.innerText="";
-  }catch(e){ error.innerText="Correo o contraseña incorrectos"; }
+  auth.signInWithEmailAndPassword(email,password)
+    .then(()=>{ error.innerText=""; })
+    .catch(()=>{ error.innerText="Correo o contraseña incorrectos"; });
 }
 
-function logout(){ signOut(auth); }
+function logout(){
+  auth.signOut();
+}
 
-onAuthStateChanged(auth,user=>{
+auth.onAuthStateChanged(user=>{
   if(user){
     document.getElementById("loginPanel").style.display="none";
     document.getElementById("panel").style.display="block";
@@ -130,188 +135,147 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
+// ===== FUNCIONES =====
 function limpiarFormulario(){
   document.getElementById("nombre").value="";
   document.getElementById("categoria").value="";
+  document.getElementById("sede").value="Pereira";
   document.getElementById("acudienteNombre").value="";
   document.getElementById("acudienteTelefono").value="";
   document.getElementById("acudienteCorreo").value="";
-  document.getElementById("sede").value="Pereira";
   document.getElementById("btnGuardar").innerText="Agregar deportista";
-  editarId=null;
+  editarId = null;
 }
 
-async function agregarDeportista(){
+function agregarDeportista(){
   const nombre = document.getElementById("nombre").value;
   const categoria = document.getElementById("categoria").value;
+  const sede = document.getElementById("sede").value;
   const acudienteNombre = document.getElementById("acudienteNombre").value;
   const acudienteTelefono = document.getElementById("acudienteTelefono").value;
   const acudienteCorreo = document.getElementById("acudienteCorreo").value;
-  const sede = document.getElementById("sede").value;
   if(!nombre) return;
 
-  let pagoActual = "Pendiente";
-  let fechaPago = null;
-  if(editarId){
-    const snapshot = await getDocs(collection(db,"deportistas"));
-    snapshot.forEach(d=>{
-      if(d.id===editarId){
-        pagoActual=d.data().pago;
-        fechaPago=d.data().fechaPago || null;
-      }
+  if(!editarId){
+    db.collection("deportistas").add({
+      nombre,
+      categoria,
+      sede,
+      pago: "Pendiente",
+      mesPago: "",
+      acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo}
+    }).then(()=>{ limpiarFormulario(); mostrar(); });
+  }else{
+    db.collection("deportistas").doc(editarId).get().then(docSnap=>{
+      let pago = docSnap.data().pago;
+      let mesPago = docSnap.data().mesPago;
+      db.collection("deportistas").doc(editarId).set({
+        nombre,
+        categoria,
+        sede,
+        pago,
+        mesPago,
+        acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo}
+      }).then(()=>{ limpiarFormulario(); mostrar(); });
     });
   }
-
-  const deportistaData = { 
-    nombre, categoria, pago: pagoActual, fechaPago, sede,
-    acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo}
-  };
-
-  if(!editarId) await addDoc(collection(db,"deportistas"),deportistaData);
-  else await setDoc(doc(db,"deportistas",editarId),deportistaData);
-
-  mostrar();
-  limpiarFormulario();
 }
 
-async function editarDeportista(id){
-  const snapshot = await getDocs(collection(db,"deportistas"));
-  snapshot.forEach(d=>{
-    if(d.id===id){
-      const data=d.data();
-      document.getElementById("nombre").value=data.nombre;
-      document.getElementById("categoria").value=data.categoria;
-      document.getElementById("acudienteNombre").value=data.acudiente?.nombre||"";
-      document.getElementById("acudienteTelefono").value=data.acudiente?.telefono||"";
-      document.getElementById("acudienteCorreo").value=data.acudiente?.correo||"";
-      document.getElementById("sede").value=data.sede||"Pereira";
-      editarId=id;
-      document.getElementById("btnGuardar").innerText="Guardar cambios";
-    }
+function editarDeportista(id){
+  db.collection("deportistas").doc(id).get().then(docSnap=>{
+    const d = docSnap.data();
+    document.getElementById("nombre").value = d.nombre;
+    document.getElementById("categoria").value = d.categoria;
+    document.getElementById("sede").value = d.sede;
+    document.getElementById("acudienteNombre").value = d.acudiente.nombre||"";
+    document.getElementById("acudienteTelefono").value = d.acudiente.telefono||"";
+    document.getElementById("acudienteCorreo").value = d.acudiente.correo||"";
+    editarId = id;
+    document.getElementById("btnGuardar").innerText = "Guardar cambios";
   });
 }
 
-async function borrarDeportista(id){
+function borrarDeportista(id){
   if(confirm("¿Seguro que deseas eliminar este deportista?")){
-    await deleteDoc(doc(db,"deportistas",id));
-    mostrar();
+    db.collection("deportistas").doc(id).delete().then(()=>{ mostrar(); });
   }
 }
 
-async function registrarPago(){
-  const nombre=document.getElementById("pagoNombre").value;
-  const monto=document.getElementById("monto").value;
-  const fecha=new Date();
-  const mes = ("0"+(fecha.getMonth()+1)).slice(-2);
-
-  const q=query(collection(db,"deportistas"),where("nombre","==",nombre));
-  const querySnapshot = await getDocs(q);
-  querySnapshot.forEach(async docu => {
-    await updateDoc(doc(db,"deportistas",docu.id),{
-      pago:"Pagado $ "+monto,
-      fechaPago: mes
+function registrarPago(){
+  const nombre = document.getElementById("pagoNombre").value;
+  const monto = document.getElementById("monto").value;
+  db.collection("deportistas").where("nombre","==",nombre).get().then(snapshot=>{
+    snapshot.forEach(docu=>{
+      docu.ref.update({pago: "Pagado $ "+monto, mesPago: new Date().getMonth()+1});
     });
+    mostrar();
   });
-  mostrar();
 }
 
-async function cambiarEstadoPago(id){
-  const docRef = doc(db,"deportistas",id);
-  const snapshot = await getDocs(collection(db,"deportistas"));
-  let actual = "Pendiente";
-  snapshot.forEach(d=>{
-    if(d.id===id) actual=d.data().pago.startsWith("Pagado")?"Pagado":"Pendiente";
+function cambiarEstado(id,estado){
+  db.collection("deportistas").doc(id).get().then(docSnap=>{
+    let d = docSnap.data();
+    db.collection("deportistas").doc(id).update({pago: estado, mesPago: estado=="Pendiente"?"":d.mesPago}).then(()=>{ mostrar(); });
   });
-  const nuevo = actual==="Pagado"?"Pendiente":"Pagado";
-  await updateDoc(docRef,{pago:nuevo, fechaPago: nuevo==="Pagado"?("0"+(new Date().getMonth()+1)).slice(-2):null});
-  mostrar();
 }
 
-function enviarWhatsApp(nombre,pago){
-  const url=`https://wa.me/?text=${encodeURIComponent(`Hola ${nombre}, tu estado de pago es: ${pago}. Club Ónix`)}`;
-  window.open(url,"_blank");
-}
-
-function enviarCorreo(nombre,pago){
-  const url=`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent("Estado de pago - Club Ónix")}&body=${encodeURIComponent(`Hola ${nombre}, tu estado de pago es: ${pago}.`)}`;
-  window.open(url,"_blank");
-}
-
-async function mostrar(){
-  const lista=document.getElementById("lista");
-  const filtroPago=document.getElementById("filtroPago").value;
-  const filtroSede=document.getElementById("filtroSede").value;
-  const filtroMes=document.getElementById("filtroMes").value;
-  const busqueda=document.getElementById("busquedaNombre").value.toLowerCase();
+function mostrar(){
+  const lista = document.getElementById("lista");
+  const filtroPago = document.getElementById("filtroPago").value;
+  const busqueda = document.getElementById("busquedaNombre").value.toLowerCase();
+  const filtroSede = document.getElementById("filtroSede").value;
+  const filtroMes = document.getElementById("filtroMes").value;
   lista.innerHTML="";
-
-  const querySnapshot = await getDocs(collection(db,"deportistas"));
-  const ordenados = {};
-  querySnapshot.forEach(d=>{
-    const data=d.data();
-    if(!ordenados[data.categoria]) ordenados[data.categoria]=[];
-    ordenados[data.categoria].push({id:d.id,...data});
-  });
-
-  for(const cat in ordenados){
-    const liCat=document.createElement("li");
-    liCat.innerHTML=`<h3>Categoría: ${cat}</h3>`;
-    lista.appendChild(liCat);
-
-    ordenados[cat].forEach(d=>{
-      const clasePago=d.pago.startsWith("Pagado")?"pago-pagado":"pago-pendiente";
-      if(filtroPago==="pendiente" && d.pago.startsWith("Pagado")) return;
-      if(filtroPago==="pagado" && d.pago.startsWith("Pendiente")) return;
-      if(filtroSede!=="todos" && d.sede!==filtroSede) return;
-      if(filtroMes!=="todos" && (d.fechaPago||"")!==filtroMes) return;
+  db.collection("deportistas").get().then(snapshot=>{
+    snapshot.forEach(docu=>{
+      const d = docu.data();
+      const id = docu.id;
+      let clasePago = d.pago.startsWith("Pagado")?"pago-pagado":"pago-pendiente";
+      if(filtroPago=="pendiente" && d.pago.startsWith("Pagado")) return;
+      if(filtroPago=="pagado" && d.pago.startsWith("Pendiente")) return;
       if(!d.nombre.toLowerCase().includes(busqueda)) return;
+      if(filtroSede!="todos" && d.sede!=filtroSede) return;
+      if(filtroMes!="todos" && d.mesPago!=filtroMes) return;
 
-      const li=document.createElement("li");
+      const li = document.createElement("li");
       li.className="deportista-card";
       li.innerHTML=`
         <strong>${d.nombre}</strong> - ${d.categoria} - <span class="${clasePago}">${d.pago}</span> - Sede: ${d.sede}<br>
-        <small>👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre||"-"}<br>
-        📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono||"-"}<br>
-        ✉️ <strong>Correo:</strong> ${d.acudiente?.correo||"-"}</small><br>
-        <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}')">📲 WhatsApp</button>
-        <button onclick="enviarCorreo('${d.nombre}','${d.pago}')">✉️ Gmail</button>
-        <button onclick="editarDeportista('${d.id}')">✏️ Editar</button>
-        <button onclick="cambiarEstadoPago('${d.id}')">${d.pago.startsWith("Pagado")?"Marcar Pendiente":"Marcar Pagado"}</button>
-        <button class="delete-btn" onclick="borrarDeportista('${d.id}')">🗑️ Eliminar</button>
+        <small>👤 <strong>Acudiente:</strong> ${d.acudiente.nombre}<br>
+        📞 <strong>Teléfono:</strong> ${d.acudiente.telefono}<br>
+        ✉️ <strong>Correo:</strong> ${d.acudiente.correo}</small><br>
+        <button onclick="editarDeportista('${id}')">✏️ Editar</button>
+        <button onclick="cambiarEstado('${id}','Pagado')">✅ Pagado</button>
+        <button onclick="cambiarEstado('${id}','Pendiente')">❌ Pendiente</button>
+        <button class="delete-btn" onclick="borrarDeportista('${id}')">🗑️ Eliminar</button>
       `;
       lista.appendChild(li);
     });
-  }
+  });
 }
 
-// Exportar PDF organizado por categoría
-async function exportarPDF(){
+function exportarPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const querySnapshot = await getDocs(collection(db,"deportistas"));
   let y = 10;
-  doc.setFontSize(16);
-  doc.text("Lista de deportistas - Club Ónix",10,y); y+=10;
-
-  const categorias={};
-  querySnapshot.forEach(d=>{
-    const data=d.data();
-    if(!categorias[data.categoria]) categorias[data.categoria]=[];
-    categorias[data.categoria].push(data);
-  });
-
-  for(const cat in categorias){
-    doc.setFontSize(14);
-    doc.text(`Categoría: ${cat}`,10,y); y+=8;
-    categorias[cat].forEach(data=>{
-      doc.setFontSize(12);
-      doc.text(`Nombre: ${data.nombre} | Sede: ${data.sede} | Pago: ${data.pago}`,10,y); y+=6;
-      doc.text(`Acudiente: ${data.acudiente?.nombre||"-"} | Tel: ${data.acudiente?.telefono||"-"} | Correo: ${data.acudiente?.correo||"-"}`,10,y); y+=8;
+  db.collection("deportistas").orderBy("categoria").get().then(snapshot=>{
+    let categoriaActual = "";
+    snapshot.forEach(docu=>{
+      const d = docu.data();
+      if(d.categoria!=categoriaActual){
+        categoriaActual = d.categoria;
+        y+=10; doc.text(`Categoría: ${categoriaActual}`,10,y);
+        y+=5;
+      }
+      doc.text(`Nombre: ${d.nombre} | Sede: ${d.sede} | Pago: ${d.pago}`,10,y);
+      y+=5;
+      doc.text(`Acudiente: ${d.acudiente.nombre} | Tel: ${d.acudiente.telefono} | Correo: ${d.acudiente.correo}`,10,y);
+      y+=8;
     });
-    y+=5;
-  }
-  doc.save("lista_deportistas.pdf");
+    doc.save("lista_deportistas.pdf");
+  });
 }
 </script>
+
 </body>
 </html>
