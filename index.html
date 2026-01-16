@@ -9,12 +9,16 @@ body{font-family:Arial;margin:20px;}
 input,select,button{padding:5px;margin:5px 0;}
 ul{list-style:none;padding:0;}
 .deportista-card{border:1px solid #ccc;padding:10px;margin-bottom:10px;border-radius:5px;background:#f9f9f9;}
-.pago-pendiente{color:orange;font-weight:bold;}
+.pago-pendiente{color:red;font-weight:bold;}
 .pago-pagado{color:green;font-weight:bold;}
 .delete-btn{background:#dc3545;color:white;border:none;border-radius:3px;padding:5px;margin-top:5px;}
+.toggle-btn{background:#007bff;color:white;border:none;border-radius:3px;padding:5px;margin-top:5px;}
 #panel{display:none;}
 #error{color:red;}
-button{cursor:pointer;}
+button{cursor:pointer;margin-right:5px;margin-top:5px;}
+table{border-collapse:collapse;width:100%;margin-top:20px;}
+th,td{border:1px solid #ccc;padding:8px;text-align:center;}
+th{background:#f0f0f0;}
 </style>
 </head>
 <body>
@@ -33,6 +37,11 @@ button{cursor:pointer;}
   <h2>Registrar deportista</h2>
   <input id="nombre" placeholder="Nombre del deportista">
   <input id="categoria" placeholder="Categoría"><br>
+  <label>Sede:</label>
+  <select id="sede">
+    <option value="Pereira">Pereira</option>
+    <option value="Dosquebradas">Dosquebradas</option>
+  </select><br>
   <h3>Datos del acudiente</h3>
   <input id="acudienteNombre" placeholder="Nombre del acudiente">
   <input id="acudienteTelefono" placeholder="Teléfono">
@@ -40,6 +49,13 @@ button{cursor:pointer;}
   <button id="btnGuardar" onclick="agregarDeportista()">Agregar deportista</button>
 
   <h2>Lista de deportistas</h2>
+  <label>Filtrar por sede: </label>
+  <select id="filtroSede" onchange="mostrar()">
+    <option value="todos">Todos</option>
+    <option value="Pereira">Pereira</option>
+    <option value="Dosquebradas">Dosquebradas</option>
+  </select>
+  <br>
   <label>Filtrar por pago: </label>
   <select id="filtroPago" onchange="mostrar()">
     <option value="todos">Todos</option>
@@ -47,9 +63,32 @@ button{cursor:pointer;}
     <option value="pagado">Pagados</option>
   </select>
   <br>
+  <label>Filtrar por mes: </label>
+  <select id="filtroMes" onchange="mostrar()">
+    <option value="todos">Todos</option>
+  </select>
+  <br>
+  <label>Filtrar por año: </label>
+  <select id="filtroAnio" onchange="mostrar()">
+    <option value="todos">Todos</option>
+  </select>
+  <br>
   <label>Buscar por nombre: </label>
   <input id="busquedaNombre" type="text" placeholder="Escribe el nombre" oninput="mostrar()">
   <ul id="lista"></ul>
+
+  <h2>Resumen de pagos por sede</h2>
+  <table id="resumenPagos">
+    <thead>
+      <tr>
+        <th>Sede</th>
+        <th>Total Deportistas</th>
+        <th>Pendientes</th>
+        <th>Pagados</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <br><br>
   <button onclick="logout()">Cerrar sesión</button>
@@ -71,11 +110,9 @@ const firebaseConfig = {
   measurementId: "G-Y8DL77DH3J"
 };
 
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-
 let editarId = null;
 
 // ===== LOGIN =====
@@ -100,6 +137,7 @@ auth.onAuthStateChanged(user => {
   if(user){
     document.getElementById("loginPanel").style.display="none";
     document.getElementById("panel").style.display="block";
+    actualizarFiltros();
     mostrar();
   } else {
     document.getElementById("loginPanel").style.display="block";
@@ -111,6 +149,7 @@ auth.onAuthStateChanged(user => {
 function limpiarFormulario(){
   document.getElementById("nombre").value="";
   document.getElementById("categoria").value="";
+  document.getElementById("sede").value="Pereira";
   document.getElementById("acudienteNombre").value="";
   document.getElementById("acudienteTelefono").value="";
   document.getElementById("acudienteCorreo").value="";
@@ -121,6 +160,7 @@ function limpiarFormulario(){
 async function agregarDeportista(){
   const nombre = document.getElementById("nombre").value;
   const categoria = document.getElementById("categoria").value;
+  const sede = document.getElementById("sede").value;
   const acudienteNombre = document.getElementById("acudienteNombre").value;
   const acudienteTelefono = document.getElementById("acudienteTelefono").value;
   const acudienteCorreo = document.getElementById("acudienteCorreo").value;
@@ -129,7 +169,9 @@ async function agregarDeportista(){
   const deportistaData = {
     nombre,
     categoria,
+    sede,
     pago:"Pendiente",
+    fechaPago: null,
     acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo}
   };
 
@@ -140,6 +182,7 @@ async function agregarDeportista(){
   }
 
   limpiarFormulario();
+  actualizarFiltros();
   mostrar();
 }
 
@@ -150,6 +193,7 @@ async function editarDeportista(id){
     const d = docSnap.data();
     document.getElementById("nombre").value = d.nombre;
     document.getElementById("categoria").value = d.categoria;
+    document.getElementById("sede").value = d.sede || "Pereira";
     document.getElementById("acudienteNombre").value = d.acudiente?.nombre || "";
     document.getElementById("acudienteTelefono").value = d.acudiente?.telefono || "";
     document.getElementById("acudienteCorreo").value = d.acudiente?.correo || "";
@@ -161,19 +205,33 @@ async function editarDeportista(id){
 async function borrarDeportista(id){
   if(confirm("¿Seguro que deseas eliminar este deportista?")){
     await db.collection("deportistas").doc(id).delete();
+    actualizarFiltros();
     mostrar();
   }
 }
 
-// ===== REGISTRAR PAGO DIRECTO =====
-async function registrarPago(id){
-  const monto = prompt("Ingrese el monto pagado (COP):");
-  if(!monto) return;
-  await db.collection("deportistas").doc(id).update({pago:"Pagado $ " + monto});
-  mostrar();
+// ===== CAMBIAR ESTADO DE PAGO =====
+async function togglePago(id){
+  const docRef = db.collection("deportistas").doc(id);
+  const docSnap = await docRef.get();
+  if(docSnap.exists){
+    const d = docSnap.data();
+    if(d.pago.startsWith("Pendiente")){
+      const monto = prompt("Ingrese el monto pagado (COP):","0");
+      if(monto === null) return;
+      const fecha = new Date();
+      await docRef.update({
+        pago:`Pagado $ ${monto}`,
+        fechaPago:{mes:fecha.getMonth()+1,anio:fecha.getFullYear()}
+      });
+    } else {
+      await docRef.update({pago:"Pendiente", fechaPago:null});
+    }
+    actualizarFiltros();
+    mostrar();
+  }
 }
 
-// ===== ENVIAR WHATSAPP Y CORREO =====
 function enviarWhatsApp(nombre,pago,telefono){
   const url=`https://wa.me/${telefono}?text=${encodeURIComponent(`Hola ${nombre}, tu estado de pago es: ${pago}. Club Ónix`)}`;
   window.open(url,"_blank");
@@ -184,37 +242,103 @@ function enviarCorreo(nombre,pago,correo){
   window.open(url,"_blank");
 }
 
+// ===== ACTUALIZAR FILTROS DE MES Y AÑO =====
+async function actualizarFiltros(){
+  const snapshot = await db.collection("deportistas").get();
+  const meses = new Set();
+  const anios = new Set();
+
+  snapshot.forEach(docu=>{
+    const d = docu.data();
+    if(d.fechaPago){
+      meses.add(d.fechaPago.mes);
+      anios.add(d.fechaPago.anio);
+    }
+  });
+
+  const filtroMes = document.getElementById("filtroMes");
+  const filtroAnio = document.getElementById("filtroAnio");
+
+  filtroMes.innerHTML = '<option value="todos">Todos</option>';
+  filtroAnio.innerHTML = '<option value="todos">Todos</option>';
+
+  Array.from(meses).sort((a,b)=>a-b).forEach(m=> {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.text = new Date(0,m-1).toLocaleString('es',{month:'long'});
+    filtroMes.appendChild(opt);
+  });
+
+  Array.from(anios).sort((a,b)=>a-b).forEach(a=> {
+    const opt = document.createElement("option");
+    opt.value = a;
+    opt.text = a;
+    filtroAnio.appendChild(opt);
+  });
+}
+
 // ===== MOSTRAR DEPORTISTAS =====
 async function mostrar(){
   const lista = document.getElementById("lista");
-  const filtro = document.getElementById("filtroPago").value;
+  const filtroPago = document.getElementById("filtroPago").value;
+  const filtroSede = document.getElementById("filtroSede").value;
+  const filtroMes = document.getElementById("filtroMes").value;
+  const filtroAnio = document.getElementById("filtroAnio").value;
   const busqueda = document.getElementById("busquedaNombre").value.toLowerCase();
   lista.innerHTML="";
+
+  const resumen = {Pereira:{total:0,pendientes:0,pagados:0}, Dosquebradas:{total:0,pendientes:0,pagados:0}};
 
   const snapshot = await db.collection("deportistas").get();
   snapshot.forEach(docu=>{
     const d = docu.data();
     const id = docu.id;
     const clasePago = d.pago.startsWith("Pagado")?"pago-pagado":"pago-pendiente";
-    if(filtro==="pendiente" && d.pago.startsWith("Pagado")) return;
-    if(filtro==="pagado" && d.pago.startsWith("Pendiente")) return;
+
+    // Resumen
+    if(resumen[d.sede]){
+      resumen[d.sede].total++;
+      if(d.pago.startsWith("Pagado")) resumen[d.sede].pagados++;
+      else resumen[d.sede].pendientes++;
+    }
+
+    // Filtros
+    if(filtroPago==="pendiente" && d.pago.startsWith("Pagado")) return;
+    if(filtroPago==="pagado" && d.pago.startsWith("Pendiente")) return;
+    if(filtroSede !== "todos" && d.sede !== filtroSede) return;
+    if(filtroMes !== "todos" && (!d.fechaPago || d.fechaPago.mes != filtroMes)) return;
+    if(filtroAnio !== "todos" && (!d.fechaPago || d.fechaPago.anio != filtroAnio)) return;
     if(!d.nombre.toLowerCase().includes(busqueda)) return;
 
     const li = document.createElement("li");
     li.className="deportista-card";
     li.innerHTML = `
-      <strong>${d.nombre}</strong> - ${d.categoria} - <span class="${clasePago}">${d.pago}</span><br>
+      <strong>${d.nombre}</strong> - ${d.categoria} - ${d.sede} - <span class="${clasePago}">${d.pago}</span><br>
       👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre || "-"}<br>
       📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono || "-"}<br>
       ✉️ <strong>Correo:</strong> ${d.acudiente?.correo || "-"}<br>
       <button onclick="editarDeportista('${id}')">✏️ Editar</button>
       <button class="delete-btn" onclick="borrarDeportista('${id}')">🗑️ Eliminar</button>
-      <button onclick="registrarPago('${id}')">💰 Registrar pago</button>
+      <button class="toggle-btn" onclick="togglePago('${id}')">💵 Cambiar estado de pago</button>
       <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}','${d.acudiente?.telefono || ""}')">📲 WhatsApp</button>
       <button onclick="enviarCorreo('${d.nombre}','${d.pago}','${d.acudiente?.correo || ""}')">✉️ Gmail</button>
     `;
     lista.appendChild(li);
   });
+
+  // Actualizar resumen
+  const tbody = document.querySelector("#resumenPagos tbody");
+  tbody.innerHTML = "";
+  for(const sede in resumen){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${sede}</td>
+      <td>${resumen[sede].total}</td>
+      <td>${resumen[sede].pendientes}</td>
+      <td>${resumen[sede].pagados}</td>
+    `;
+    tbody.appendChild(tr);
+  }
 }
 </script>
 
