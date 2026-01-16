@@ -3,19 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <title>Panel Entrenador - Club Ónix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
 <h1>Panel del Entrenador</h1>
 
-<p>Bienvenido entrenador del Club Deportivo Volleyball Ónix</p>
-
-<ul>
-  <li>Registrar asistencias</li>
-  <li>Ver deportistas</li>
-</ul>
+<h2>Lista de deportistas</h2>
+<ul id="lista"></ul>
 
 <a href="login.html">Cerrar sesión</a>
+
+<script>
+let deportistas = JSON.parse(localStorage.getItem("deportistas")) || [];
+
+function guardar() {
+  localStorage.setItem("deportistas", JSON.stringify(deportistas));
+  mostrar();
+}
+
+function marcarAsistencia(index, estado) {
+  deportistas[index].asistencia = estado;
+  guardar();
+}
+
+function mostrar() {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  deportistas.forEach((d, index) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${d.nombre}</strong> - ${d.categoria}<br>
+      Asistencia:
+      <button onclick="marcarAsistencia(${index}, 'Asistió')">✅</button>
+      <button onclick="marcarAsistencia(${index}, 'No asistió')">❌</button>
+      <span> ${d.asistencia || ''}</span>
+    `;
+    lista.appendChild(li);
+  });
+}
+
+mostrar();
+</script>
 
 </body>
 </html>
