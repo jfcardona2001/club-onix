@@ -15,6 +15,11 @@ ul{list-style:none;padding:0;}
 #panel{display:none;}
 #error{color:red;}
 </style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -29,50 +34,46 @@ ul{list-style:none;padding:0;}
 </div>
 
 <div id="panel">
-  <h2>Registrar deportista</h2>
+  <h2>Registrar / Editar deportista</h2>
   <input id="nombre" placeholder="Nombre del deportista">
-  <input id="categoria" placeholder="Categoría">
-  <select id="sede">
-    <option value="Pereira">Pereira</option>
-    <option value="Dosquebradas">Dosquebradas</option>
-  </select><br>
+  <input id="categoria" placeholder="Categoría"><br>
   <h3>Datos del acudiente</h3>
   <input id="acudienteNombre" placeholder="Nombre del acudiente">
   <input id="acudienteTelefono" placeholder="Teléfono">
   <input id="acudienteCorreo" type="email" placeholder="Correo electrónico"><br>
+  <label>Sede:</label>
+  <select id="sede">
+    <option value="Pereira">Pereira</option>
+    <option value="Dosquebradas">Dosquebradas</option>
+  </select><br>
   <button id="btnGuardar" onclick="agregarDeportista()">Agregar deportista</button>
 
   <h2>Filtros</h2>
-  Nombre: <input id="busquedaNombre" type="text" placeholder="Buscar nombre" oninput="mostrar()">
-  Sede: 
+  <label>Nombre: </label><input id="busquedaNombre" oninput="mostrar()"><br>
+  <label>Sede: </label>
   <select id="filtroSede" onchange="mostrar()">
     <option value="todos">Todos</option>
     <option value="Pereira">Pereira</option>
     <option value="Dosquebradas">Dosquebradas</option>
-  </select>
-  Pago:
-  <select id="filtroPago" onchange="mostrar()">
-    <option value="todos">Todos</option>
-    <option value="pendiente">Pendientes</option>
-    <option value="pagado">Pagados</option>
-  </select>
-  Mes:
+  </select><br>
+  <label>Mes de pago: </label>
   <select id="filtroMes" onchange="mostrar()">
     <option value="todos">Todos</option>
-    <option value="01">Enero</option>
-    <option value="02">Febrero</option>
-    <option value="03">Marzo</option>
-    <option value="04">Abril</option>
-    <option value="05">Mayo</option>
-    <option value="06">Junio</option>
-    <option value="07">Julio</option>
-    <option value="08">Agosto</option>
-    <option value="09">Septiembre</option>
+    <option value="1">Enero</option>
+    <option value="2">Febrero</option>
+    <option value="3">Marzo</option>
+    <option value="4">Abril</option>
+    <option value="5">Mayo</option>
+    <option value="6">Junio</option>
+    <option value="7">Julio</option>
+    <option value="8">Agosto</option>
+    <option value="9">Septiembre</option>
     <option value="10">Octubre</option>
     <option value="11">Noviembre</option>
     <option value="12">Diciembre</option>
-  </select>
+  </select><br>
 
+  <h2>Lista de deportistas</h2>
   <ul id="lista"></ul>
 
   <h2>Registrar pago</h2>
@@ -81,16 +82,9 @@ ul{list-style:none;padding:0;}
   <button onclick="registrarPago()">Registrar pago</button>
 
   <br><br>
-  <button onclick="exportarPDF()">Exportar lista a PDF</button>
-  <br><br>
+  <button onclick="exportarPDF()">Exportar PDF</button>
   <button onclick="logout()">Cerrar sesión</button>
 </div>
-
-<!-- Firebase CDN -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 const firebaseConfig = {
@@ -102,8 +96,6 @@ const firebaseConfig = {
   appId: "1:378193996380:web:12c4c1cf27499e224a9499",
   measurementId: "G-Y8DL77DH3J"
 };
-
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
@@ -120,9 +112,7 @@ function login(){
     .catch(()=>{ error.innerText="Correo o contraseña incorrectos"; });
 }
 
-function logout(){
-  auth.signOut();
-}
+function logout(){ auth.signOut(); }
 
 auth.onAuthStateChanged(user=>{
   if(user){
@@ -135,48 +125,47 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// ===== FUNCIONES =====
+// ===== FUNCIONES PRINCIPALES =====
 function limpiarFormulario(){
   document.getElementById("nombre").value="";
   document.getElementById("categoria").value="";
-  document.getElementById("sede").value="Pereira";
   document.getElementById("acudienteNombre").value="";
   document.getElementById("acudienteTelefono").value="";
   document.getElementById("acudienteCorreo").value="";
+  document.getElementById("sede").value="Pereira";
   document.getElementById("btnGuardar").innerText="Agregar deportista";
   editarId = null;
 }
 
 function agregarDeportista(){
-  const nombre = document.getElementById("nombre").value;
-  const categoria = document.getElementById("categoria").value;
+  const nombre=document.getElementById("nombre").value;
+  const categoria=document.getElementById("categoria").value;
+  const acudienteNombre=document.getElementById("acudienteNombre").value;
+  const acudienteTelefono=document.getElementById("acudienteTelefono").value;
+  const acudienteCorreo=document.getElementById("acudienteCorreo").value;
   const sede = document.getElementById("sede").value;
-  const acudienteNombre = document.getElementById("acudienteNombre").value;
-  const acudienteTelefono = document.getElementById("acudienteTelefono").value;
-  const acudienteCorreo = document.getElementById("acudienteCorreo").value;
   if(!nombre) return;
 
   if(!editarId){
     db.collection("deportistas").add({
       nombre,
       categoria,
+      pago:"Pendiente",
+      mesPago:"",
       sede,
-      pago: "Pendiente",
-      mesPago: "",
       acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo}
-    }).then(()=>{ limpiarFormulario(); mostrar(); });
+    }).then(limpiarFormulario).then(mostrar);
   }else{
     db.collection("deportistas").doc(editarId).get().then(docSnap=>{
-      let pago = docSnap.data().pago;
-      let mesPago = docSnap.data().mesPago;
-      db.collection("deportistas").doc(editarId).set({
+      const d = docSnap.data();
+      db.collection("deportistas").doc(editarId).update({
         nombre,
         categoria,
         sede,
-        pago,
-        mesPago,
-        acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo}
-      }).then(()=>{ limpiarFormulario(); mostrar(); });
+        acudiente:{nombre:acudienteNombre,telefono:acudienteTelefono,correo:acudienteCorreo},
+        pago: d.pago,
+        mesPago: d.mesPago
+      }).then(limpiarFormulario).then(mostrar);
     });
   }
 }
@@ -186,67 +175,67 @@ function editarDeportista(id){
     const d = docSnap.data();
     document.getElementById("nombre").value = d.nombre;
     document.getElementById("categoria").value = d.categoria;
-    document.getElementById("sede").value = d.sede;
-    document.getElementById("acudienteNombre").value = d.acudiente.nombre||"";
-    document.getElementById("acudienteTelefono").value = d.acudiente.telefono||"";
-    document.getElementById("acudienteCorreo").value = d.acudiente.correo||"";
+    document.getElementById("acudienteNombre").value = d.acudiente?.nombre||"";
+    document.getElementById("acudienteTelefono").value = d.acudiente?.telefono||"";
+    document.getElementById("acudienteCorreo").value = d.acudiente?.correo||"";
+    document.getElementById("sede").value = d.sede||"Pereira";
     editarId = id;
-    document.getElementById("btnGuardar").innerText = "Guardar cambios";
+    document.getElementById("btnGuardar").innerText="Guardar cambios";
   });
 }
 
 function borrarDeportista(id){
   if(confirm("¿Seguro que deseas eliminar este deportista?")){
-    db.collection("deportistas").doc(id).delete().then(()=>{ mostrar(); });
+    db.collection("deportistas").doc(id).delete().then(mostrar);
   }
+}
+
+function cambiarEstado(id,estado){
+  const mesActual = new Date().getMonth()+1;
+  let nuevoPago = estado.startsWith("Pagado") ? "Pagado" : "Pendiente";
+  let nuevoMes = estado.startsWith("Pagado") ? mesActual : "";
+  db.collection("deportistas").doc(id).update({pago:nuevoPago, mesPago:nuevoMes}).then(mostrar);
 }
 
 function registrarPago(){
   const nombre = document.getElementById("pagoNombre").value;
   const monto = document.getElementById("monto").value;
+  const mesActual = new Date().getMonth() + 1;
   db.collection("deportistas").where("nombre","==",nombre).get().then(snapshot=>{
     snapshot.forEach(docu=>{
-      docu.ref.update({pago: "Pagado $ "+monto, mesPago: new Date().getMonth()+1});
+      docu.ref.update({pago:"Pagado", mesPago:mesActual});
     });
     mostrar();
   });
 }
 
-function cambiarEstado(id,estado){
-  db.collection("deportistas").doc(id).get().then(docSnap=>{
-    let d = docSnap.data();
-    db.collection("deportistas").doc(id).update({pago: estado, mesPago: estado=="Pendiente"?"":d.mesPago}).then(()=>{ mostrar(); });
-  });
-}
-
 function mostrar(){
-  const lista = document.getElementById("lista");
-  const filtroPago = document.getElementById("filtroPago").value;
-  const busqueda = document.getElementById("busquedaNombre").value.toLowerCase();
-  const filtroSede = document.getElementById("filtroSede").value;
-  const filtroMes = document.getElementById("filtroMes").value;
+  const lista=document.getElementById("lista");
+  const filtroSede=document.getElementById("filtroSede").value;
+  const filtroMes=document.getElementById("filtroMes").value;
+  const busqueda=document.getElementById("busquedaNombre").value.toLowerCase();
   lista.innerHTML="";
   db.collection("deportistas").get().then(snapshot=>{
     snapshot.forEach(docu=>{
       const d = docu.data();
       const id = docu.id;
-      let clasePago = d.pago.startsWith("Pagado")?"pago-pagado":"pago-pendiente";
-      if(filtroPago=="pendiente" && d.pago.startsWith("Pagado")) return;
-      if(filtroPago=="pagado" && d.pago.startsWith("Pendiente")) return;
+      if(filtroSede!=="todos" && d.sede!==filtroSede) return;
+      if(filtroMes!=="todos" && d.mesPago != filtroMes) return;
       if(!d.nombre.toLowerCase().includes(busqueda)) return;
-      if(filtroSede!="todos" && d.sede!=filtroSede) return;
-      if(filtroMes!="todos" && d.mesPago!=filtroMes) return;
 
-      const li = document.createElement("li");
+      const clasePago = d.pago==="Pagado" ? "pago-pagado" : "pago-pendiente";
+
+      const li=document.createElement("li");
       li.className="deportista-card";
       li.innerHTML=`
-        <strong>${d.nombre}</strong> - ${d.categoria} - <span class="${clasePago}">${d.pago}</span> - Sede: ${d.sede}<br>
-        <small>👤 <strong>Acudiente:</strong> ${d.acudiente.nombre}<br>
-        📞 <strong>Teléfono:</strong> ${d.acudiente.telefono}<br>
-        ✉️ <strong>Correo:</strong> ${d.acudiente.correo}</small><br>
+        <strong>${d.nombre}</strong> - ${d.categoria} - <span class="${clasePago}">${d.pago}</span><br>
+        <small>👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre||"-"}<br>
+        📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono||"-"}<br>
+        ✉️ <strong>Correo:</strong> ${d.acudiente?.correo||"-"}<br>
+        🏢 <strong>Sede:</strong> ${d.sede}</small><br>
+        <button onclick="cambiarEstado('${id}','Pagado')">Pagado</button>
+        <button onclick="cambiarEstado('${id}','Pendiente')">Pendiente</button>
         <button onclick="editarDeportista('${id}')">✏️ Editar</button>
-        <button onclick="cambiarEstado('${id}','Pagado')">✅ Pagado</button>
-        <button onclick="cambiarEstado('${id}','Pendiente')">❌ Pendiente</button>
         <button class="delete-btn" onclick="borrarDeportista('${id}')">🗑️ Eliminar</button>
       `;
       lista.appendChild(li);
@@ -259,20 +248,17 @@ function exportarPDF(){
   const doc = new jsPDF();
   let y = 10;
   db.collection("deportistas").orderBy("categoria").get().then(snapshot=>{
-    let categoriaActual = "";
     snapshot.forEach(docu=>{
       const d = docu.data();
-      if(d.categoria!=categoriaActual){
-        categoriaActual = d.categoria;
-        y+=10; doc.text(`Categoría: ${categoriaActual}`,10,y);
-        y+=5;
-      }
-      doc.text(`Nombre: ${d.nombre} | Sede: ${d.sede} | Pago: ${d.pago}`,10,y);
-      y+=5;
-      doc.text(`Acudiente: ${d.acudiente.nombre} | Tel: ${d.acudiente.telefono} | Correo: ${d.acudiente.correo}`,10,y);
-      y+=8;
+      doc.text(`Nombre: ${d.nombre}`,10,y); y+=6;
+      doc.text(`Categoría: ${d.categoria}`,10,y); y+=6;
+      doc.text(`Acudiente: ${d.acudiente?.nombre||"-"}`,10,y); y+=6;
+      doc.text(`Teléfono: ${d.acudiente?.telefono||"-"}`,10,y); y+=6;
+      doc.text(`Correo: ${d.acudiente?.correo||"-"}`,10,y); y+=6;
+      doc.text(`Sede: ${d.sede}`,10,y); y+=8;
+      if(y>270){ doc.addPage(); y=10; }
     });
-    doc.save("lista_deportistas.pdf");
+    doc.save("Deportistas.pdf");
   });
 }
 </script>
