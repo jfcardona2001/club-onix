@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ingreso - Club Ónix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<h2>Ingreso al sistema - Club Ónix</h2>
+
+<form onsubmit="return login()">
+  <label>Usuario:</label><br>
+  <input type="text" id="usuario" required><br><br>
+
+  <label>Contraseña:</label><br>
+  <input type="password" id="password" required><br><br>
+
+  <button type="submit">Ingresar</button>
+</form>
+
+<p id="mensaje" style="color:red;"></p>
+
+<script>
+function login() {
+  const usuario = document.getElementById("usuario").value;
+  const password = document.getElementById("password").value;
+
+  // Usuarios base (provisional)
+  if (usuario === "admin" && password === "admin123") {
+    window.location.href = "panel-admin.html";
+    return false;
+  }
+
+  if (usuario.startsWith("entrenador") && password === "1234") {
+    window.location.href = "panel-entrenador.html";
+    return false;
+  }
+
+  document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos";
+  return false;
+}
+</script>
+
+</body>
+</html>
