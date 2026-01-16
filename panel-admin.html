@@ -10,9 +10,17 @@
 <h1>Panel Administrador - Club Ónix</h1>
 
 <h2>Registrar deportista</h2>
-<input id="nombre" placeholder="Nombre completo">
+
+<input id="nombre" placeholder="Nombre del deportista">
 <input id="categoria" placeholder="Categoría">
-<button onclick="agregarDeportista()">Agregar</button>
+
+<h3>Datos del acudiente</h3>
+<input id="acudienteNombre" placeholder="Nombre del acudiente">
+<input id="acudienteTelefono" placeholder="Teléfono">
+<input id="acudienteCorreo" type="email" placeholder="Correo electrónico">
+
+<button onclick="agregarDeportista()">Agregar deportista</button>
+
 
 <h2>Lista de deportistas</h2>
 <ul id="lista"></ul>
@@ -36,10 +44,34 @@ function guardar() {
 function agregarDeportista() {
   const nombre = document.getElementById("nombre").value;
   const categoria = document.getElementById("categoria").value;
+
+  const acudienteNombre = document.getElementById("acudienteNombre").value;
+  const acudienteTelefono = document.getElementById("acudienteTelefono").value;
+  const acudienteCorreo = document.getElementById("acudienteCorreo").value;
+
   if (!nombre) return;
-  deportistas.push({ nombre, categoria, pago: "Pendiente" });
+
+  deportistas.push({
+    nombre,
+    categoria,
+    pago: "Pendiente",
+    acudiente: {
+      nombre: acudienteNombre,
+      telefono: acudienteTelefono,
+      correo: acudienteCorreo
+    }
+  });
+
   guardar();
+
+  // Limpiar campos
+  document.getElementById("nombre").value = "";
+  document.getElementById("categoria").value = "";
+  document.getElementById("acudienteNombre").value = "";
+  document.getElementById("acudienteTelefono").value = "";
+  document.getElementById("acudienteCorreo").value = "";
 }
+
 
 function registrarPago() {
   const nombre = document.getElementById("pagoNombre").value;
@@ -66,13 +98,23 @@ function enviarCorreo(nombre, pago) {
 function mostrar() {
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
-  deportistas.forEach(d => {
+  deportistas.forEach((d, index) => {
     const li = document.createElement("li");
     li.innerHTML = `
-      <strong>${d.nombre}</strong> - ${d.categoria} - ${d.pago}<br>
-      <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}')">📲 WhatsApp</button>
-      <button onclick="enviarCorreo('${d.nombre}','${d.pago}')">✉️ Gmail</button>
-    `;
+    <button onclick="editarDeportista(${index})">✏️ Editar</button>
+  <strong>${d.nombre}</strong> - ${d.categoria} - ${d.pago}<br>
+
+  <small>
+    👤 <strong>Acudiente:</strong> ${d.acudiente?.nombre || "No registrado"}<br>
+    📞 <strong>Teléfono:</strong> ${d.acudiente?.telefono || "-"}<br>
+    ✉️ <strong>Correo:</strong> ${d.acudiente?.correo || "-"}
+  </small>
+  <br>
+
+  <button onclick="enviarWhatsApp('${d.nombre}','${d.pago}')">📲 WhatsApp</button>
+  <button onclick="enviarCorreo('${d.nombre}','${d.pago}')">✉️ Gmail</button>
+`;
+
     lista.appendChild(li);
   });
 }
