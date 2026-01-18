@@ -435,5 +435,123 @@ function generarFacturaPDF(nombre,categoria,sede,acudiente,monto,fecha){
   doc.save(`Factura_${nombre}.pdf`);
 }
 </script>
+  <script>
+/* ===============================
+   HISTORIAL DETALLADO DE PAGOS
+   NO MODIFICA CÓDIGO EXISTENTE
+   =============================== */
+
+/*
+Estructura que se guardará en Firestore:
+Colección: historial_pagos
+{
+  deportistaId,
+  nombre,
+  categoria,
+  sede,
+  monto,
+  fecha,
+  mes,
+  anio,
+  metodo: "Efectivo",
+  usuario: correo del admin
+}
+*/
+
+// 🔹 Registrar pago en historial (se llama desde togglePago sin tocarlo)
+async function registrarHistorialPago(deportistaId, deportistaData, monto, fecha){
+  try{
+    await db.collection("historial_pagos").add({
+      deportistaId: deportistaId,
+      nombre: deportistaData.nombre,
+      categoria: deportistaData.categoria,
+      sede: deportistaData.sede,
+      monto: monto,
+      fecha: firebase.firestore.Timestamp.fromDate(fecha),
+      mes: fecha.getMonth() + 1,
+      anio: fecha.getFullYear(),
+      metodo: "Efectivo",
+      usuario: auth.currentUser?.email || "desconocido"
+    });
+  }catch(e){
+    console.error("Error guardando historial:", e);
+  }
+}
+
+// 🔹 Mostrar historial completo por deportista
+async function verHistorialPagos(deportistaId){
+  const snapshot = await db.collection("historial_pagos")
+    .where("deportistaId","==",deportistaId)
+    .orderBy("fecha","desc")
+    .get();
+
+  if(snapshot.empty){
+    alert("Este deportista no tiene pagos registrados.");
+    return;
+  }
+
+  let texto = "HISTORIAL DE PAGOS\n\n";
+
+  snapshot.forEach(doc=>{
+    const d = doc.data();
+    const fecha = d.fecha.toDate().toLocaleDateString();
+    texto += `📅 ${fecha}\n💰 $ ${d.monto}\n🏟️ ${d.sede}\n👤 ${d.usuario}\n\n`;
+  });
+
+  alert(texto);
+}
+
+// 🔹 Hook seguro: extendemos togglePago SIN MODIFICARLO
+const togglePagoOriginal = togglePago;
+togglePago = async function(id){
+  const docRef = db.collection("deportistas").doc(id);
+  const docSnap = await docRef.get();
+  if(!docSnap.exists) return;
+
+  const d = docSnap.data();
+
+  if(d.pago.startsWith("Pendiente")){
+    const monto = prompt("Ingrese el monto pagado (COP):","0");
+    if(monto === null) return;
+
+    const fecha = new Date();
+
+    await docRef.update({
+      pago:`Pagado $ ${monto}`,
+      fechaPago:{mes:fecha.getMonth()+1,anio:fecha.getFullYear()}
+    });
+
+    await registrarHistorialPago(id, d, monto, fecha);
+    generarFacturaPDF(d.nombre,d.categoria,d.sede,d.acudiente,monto,fecha);
+  } else {
+    await docRef.update({pago:"Pendiente", fechaPago:null});
+  }
+
+  mostrar();
+};
+
+// 🔹 Agregar botón de historial visualmente (sin tocar HTML)
+const mostrarOriginal = mostrar;
+mostrar = async function(){
+  await mostrarOriginal();
+
+  document.querySelectorAll(".deportista-card").forEach(card=>{
+    if(card.innerHTML.includes("Historial")) return;
+
+    const match = card.innerHTML.match(/editarDeportista\\('(.+?)'\\)/);
+    if(!match) return;
+
+    const id = match[1];
+
+    const btn = document.createElement("button");
+    btn.className = "toggle-btn";
+    btn.innerText = "📊 Historial de pagos";
+    btn.onclick = ()=>verHistorialPagos(id);
+
+    card.appendChild(btn);
+  });
+};
+</script>
+
 </body>
 </html>
